@@ -27,6 +27,22 @@ class Model:
         """
         # TODO
 
+        risultato = []
+
+        for distributore in self._distributori:
+            prezzi = distributore.get_prezzi()
+            prezzi_mese = [
+                prezzo.prezzo_litro
+                for prezzo in prezzi
+                if prezzo.data.month == mese
+            ]
+
+            if prezzi_mese:
+                media = sum(prezzi_mese) / len(prezzi_mese)
+                risultato.append((distributore.nome, media))
+
+        return risultato
+
     def get_sequenza_ottima(self, mese:int):
         """
         Calcola la sequenza ottimale di rifornimenti nei primi 7 giorni
@@ -48,9 +64,52 @@ class Model:
         """ Implementa la ricorsione """
         # TODO
 
+        if giorno > 7:
+            if self.__costo_ottimo == -1 or costo_corrente < self.__costo_ottimo:
+                self.__costo_ottimo = costo_corrente
+                self.__sequenza_ottima = sequenza_parziale.copy()
+            return
+
+        for id_distributore in prezzi_settimana:
+            costo_giorno = prezzi_settimana[id_distributore][giorno - 1] * 100
+
+            if ultimo_distributore is not None and ultimo_distributore != id_distributore:
+                costo_giorno += 5
+
+            sequenza_parziale.append(id_distributore)
+
+            self.__ricorsione(
+                sequenza_parziale,
+                giorno + 1,
+                id_distributore,
+                costo_corrente + costo_giorno,
+                prezzi_settimana
+            )
+
+            sequenza_parziale.pop()
+
     def __get_prezzi_prima_settimana_mese(self, mese: int):
         """
         Restituisce i prezzi dei primi 7 giorni del mese selezionato per ciascun distributore.
         :return: un dizionario: {id_distributore: [prezzo_giorno1, ..., prezzo_giorno7]}
         """
         # TODO
+
+        prezzi_settimana = {}
+
+        for distributore in self._distributori:
+            prezzi = distributore.get_prezzi()
+            prezzi_filtrati = [
+                prezzo
+                for prezzo in prezzi
+                if prezzo.data.month == mese and 1 <= prezzo.data.day <= 7
+            ]
+
+            prezzi_filtrati.sort(key=lambda prezzo: prezzo.data)
+
+            prezzi_settimana[distributore.id] = [
+                prezzo.prezzo_litro
+                for prezzo in prezzi_filtrati
+            ]
+
+        return prezzi_settimana
